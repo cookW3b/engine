@@ -1,2 +1,2 @@
-mod vector;
-mod matrix;
+pub mod vector;
+pub mod matrix;

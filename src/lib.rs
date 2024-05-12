@@ -13,6 +13,7 @@ use state::State;
 
 mod math;
 mod state;
+mod camera;
 
 pub async fn run() {
     let mut app = App::default();
