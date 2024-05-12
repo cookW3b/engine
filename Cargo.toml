@@ -9,3 +9,4 @@ edition = "2021"
 wgpu = "0.20.0"
 winit = "0.30.0"
 tokio = { version = "1", features = ["full"] }
+pollster = "0.2.4"
