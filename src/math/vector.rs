@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 pub struct Vector2D {
     pub x: f32,
     pub y: f32,
@@ -54,9 +56,9 @@ impl Vector2D {
 }
 
 pub struct Vector3D {
-    x: f32,
-    y: f32,
-    z: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
 }
 
 impl Vector3D {
@@ -123,4 +125,30 @@ pub struct Vector4D {
     pub y: f32,
     pub z: f32,
     pub w: f32,
+}
+
+impl Index<usize> for Vector4D {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl IndexMut<usize> for Vector4D {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("Index out of bounds"),
+        }
+    }
 }

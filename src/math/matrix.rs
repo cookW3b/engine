@@ -1,4 +1,5 @@
 use super::vector::{Vector2D, Vector3D, Vector4D};
+use std::ops::{Index, IndexMut};
 
 pub struct Matrix2 {
     pub x: Vector2D,
@@ -65,9 +66,7 @@ impl Matrix4 {
         c3r0: f32, c3r1: f32, c3r2: f32, c3r3: f32
     ) -> Self {
         Self {
-            x: Vector4D { x: c0r0, y: c0r1, z: c0r2, w: c0r3 },
-            y: Vector4D { x: c1r0, y: c1r1, z: c1r2, w: c1r3 },
-            z: Vector4D { x: c2r0, y: c2r1, z: c2r2, w: c2r3 },
+            x: Vector4D { x: c0r0, y: c0r1, z: c0r2, w: c0r3 }, y: Vector4D { x: c1r0, y: c1r1, z: c1r2, w: c1r3 }, z: Vector4D { x: c2r0, y: c2r1, z: c2r2, w: c2r3 },
             w: Vector4D { x: c3r0, y: c3r1, z: c3r2, w: c3r3 },
         }
     }
@@ -88,6 +87,48 @@ impl Matrix4 {
 
         let up_look = right.cross(&direction);
 
-        let result = Self::default();
+        let mut result = Self::default();
+
+        result[0][0] = right.x;
+        result[1][0] = right.y;
+        result[2][0] = right.z;
+
+        result[0][1] = up_look.x;
+        result[1][1] = up_look.y; result[2][1] = up_look.z;
+        result[0][2] = -direction.x;
+        result[1][2] = -direction.y;
+        result[2][2] = -direction.z;
+
+        result[0][3] = -right.dot(&eye);
+        result[1][3] = -up_look.dot(&eye);
+        result[2][3] = -direction.dot(&eye);
+
+        result
+    }
+}
+
+impl Index<usize> for Matrix4 {
+    type Output = Vector4D;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            2 => &self.z,
+            3 => &self.w,
+            _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl IndexMut<usize> for Matrix4 {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            2 => &mut self.z,
+            3 => &mut self.w,
+            _ => panic!("Index out of bounds"),
+        }
     }
 }
