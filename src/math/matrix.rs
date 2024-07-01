@@ -1,5 +1,8 @@
 use super::vector::{Vector2D, Vector3D, Vector4D};
-use std::ops::{Index, IndexMut};
+use std::{
+    f32::consts::PI,
+    ops::{Index, IndexMut, Mul},
+};
 
 pub struct Matrix2 {
     pub x: Vector2D,
@@ -32,8 +35,8 @@ impl Matrix2 {
 
     pub fn multiply_by_vector(&self, vector: &Vector2D) -> Vector2D {
         Vector2D {
-            x: self.x.x * vector.x + self.y.x * vector.y,
-            y: self.x.y * vector.x + self.y.y * vector.y,
+            x: self.x.x * vector.x + self.x.y * vector.y,
+            y: self.y.x * vector.x + self.y.y * vector.y,
         }
     }
 
@@ -48,7 +51,7 @@ pub struct Matrix3 {
     pub z: Vector3D,
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Matrix4 {
     pub x: Vector4D,
     pub y: Vector4D,
@@ -66,7 +69,9 @@ impl Matrix4 {
         c3r0: f32, c3r1: f32, c3r2: f32, c3r3: f32
     ) -> Self {
         Self {
-            x: Vector4D { x: c0r0, y: c0r1, z: c0r2, w: c0r3 }, y: Vector4D { x: c1r0, y: c1r1, z: c1r2, w: c1r3 }, z: Vector4D { x: c2r0, y: c2r1, z: c2r2, w: c2r3 },
+            x: Vector4D { x: c0r0, y: c0r1, z: c0r2, w: c0r3 },
+            y: Vector4D { x: c1r0, y: c1r1, z: c1r2, w: c1r3 },
+            z: Vector4D { x: c2r0, y: c2r1, z: c2r2, w: c2r3 },
             w: Vector4D { x: c3r0, y: c3r1, z: c3r2, w: c3r3 },
         }
     }
@@ -80,30 +85,51 @@ impl Matrix4 {
         }
     }
 
-    pub fn look_at(eye: Vector3D, target: Vector3D, up: Vector3D) -> Self {
-        let direction = target.sub(&eye).normalize();
-        let up_normal = up.normalize();
-        let right = direction.cross(&up_normal).normalize();
+    pub fn to_array(&self) -> [[f32; 4]; 4] {
+        [
+            [self.x.x, self.x.y, self.x.z, self.x.w],
+            [self.y.x, self.y.y, self.y.z, self.y.w],
+            [self.z.x, self.z.y, self.z.z, self.z.w],
+            [self.w.x, self.w.y, self.w.z, self.w.w],
+        ]
+    }
 
-        let up_look = right.cross(&direction);
+    pub fn look_at(eye: &Vector3D, target: &Vector3D, up: &Vector3D) -> Self {
+        let f = target.sub(eye).normalize();
+        let s = f.cross(up).normalize();
+        let u = s.cross(&f);
 
-        let mut result = Self::default();
+        let mut result = Matrix4::default();
 
-        result[0][0] = right.x;
-        result[1][0] = right.y;
-        result[2][0] = right.z;
-
-        result[0][1] = up_look.x;
-        result[1][1] = up_look.y; result[2][1] = up_look.z;
-        result[0][2] = -direction.x;
-        result[1][2] = -direction.y;
-        result[2][2] = -direction.z;
-
-        result[0][3] = -right.dot(&eye);
-        result[1][3] = -up_look.dot(&eye);
-        result[2][3] = -direction.dot(&eye);
+        result[0][0] = s.x;
+        result[0][1] = u.x;
+        result[0][2] = -f.x;
+        result[1][0] = s.y;
+        result[1][1] = u.y;
+        result[1][2] = -f.y;
+        result[2][0] = s.z;
+        result[2][1] = u.z;
+        result[2][2] = -f.z;
+        result[3][0] = -s.dot(eye);
+        result[3][1] = -u.dot(eye);
+        result[3][2] = f.dot(eye);
+        result[3][3] = 1.0;
 
         result
+    }
+
+    pub fn perspective(fov: f32, aspect: f32, near: f32, far: f32) -> Self {
+        let fov_rad = fov * (PI / 180.0);
+        let mut perspective_matrix = Self::default();
+        let distance = (fov_rad * 0.5).tan().recip();
+
+        perspective_matrix[0][0] = distance / aspect;
+        perspective_matrix[1][1] = distance;
+        perspective_matrix[2][2] = (far + near) / (near - far);
+        perspective_matrix[2][3] = -1.0;
+        perspective_matrix[3][2] = (2.0 * far * near) / (near - far);
+
+        perspective_matrix
     }
 }
 
@@ -130,5 +156,15 @@ impl IndexMut<usize> for Matrix4 {
             3 => &mut self.w,
             _ => panic!("Index out of bounds"),
         }
+    }
+}
+
+impl Mul<Matrix4> for Matrix4 {
+    type Output = Self;
+
+    fn mul(self, other: Matrix4) -> Self {
+        let mut result = Matrix4::default();
+
+        result
     }
 }

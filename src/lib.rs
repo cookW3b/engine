@@ -14,6 +14,7 @@ use state::State;
 mod math;
 mod state;
 mod camera;
+mod camera_cgmath;
 
 pub async fn run() {
     let mut app = App::default();

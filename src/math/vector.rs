@@ -1,4 +1,6 @@
-use std::ops::{Index, IndexMut};
+use std::ops::{Index, IndexMut, Add, Div, Sub, Mul};
+
+use super::matrix::Matrix4;
 
 pub struct Vector2D {
     pub x: f32,
@@ -119,12 +121,32 @@ impl Vector3D {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Vector4D {
     pub x: f32,
     pub y: f32,
     pub z: f32,
     pub w: f32,
+}
+
+impl Vector4D {
+    pub fn multiple_by_scalar(&self, scalar: f32) -> Self {
+        Self {
+            x: self.x * scalar,
+            y: self.y * scalar,
+            z: self.z * scalar,
+            w: self.w * scalar,
+        }
+    }
+
+    pub fn add_vector(&self, other: &Vector4D) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+            w: self.w + other.w
+        }
+    }
 }
 
 impl Index<usize> for Vector4D {
@@ -149,6 +171,110 @@ impl IndexMut<usize> for Vector4D {
             2 => &mut self.z,
             3 => &mut self.w,
             _ => panic!("Index out of bounds"),
+        }
+    }
+}
+
+impl Add<f32> for Vector4D {
+    type Output = Self;
+
+    fn add(self, v: f32) -> Self {
+        Self {
+            x: self.x + v,
+            y: self.y + v,
+            z: self.z + v,
+            w: self.w + v
+        }
+    }
+}
+
+impl Add<Vector4D> for Vector4D {
+    type Output = Self;
+
+    fn add(self, other: Vector4D) -> Self {
+        Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+            w: self.w + other.w
+        }
+    }
+}
+
+impl Sub<f32> for Vector4D {
+    type Output = Self;
+
+    fn sub(self, v: f32) -> Self {
+        Self {
+            x: self.x - v,
+            y: self.y - v,
+            z: self.z - v,
+            w: self.w - v
+        }
+    }
+}
+
+impl Sub<Vector4D> for Vector4D {
+    type Output = Self;
+
+    fn sub(self, other: Vector4D) -> Self {
+        Self {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+            w: self.w - other.w
+        }
+    }
+}
+
+impl Mul<f32> for Vector4D {
+    type Output = Self;
+
+    fn mul(self, v: f32) -> Self {
+        Self {
+            x: self.x * v,
+            y: self.y * v,
+            z: self.z * v,
+            w: self.w * v
+        }
+    }
+}
+
+impl Mul<Vector4D> for Vector4D {
+    type Output = f32;
+
+    fn mul(self, other: Vector4D) -> f32 {
+        let mut sum = 0.0;
+
+        for i in 0..4 {
+            sum += self[i] * other[i]
+        }
+
+        sum
+    }
+}
+
+impl Mul<Matrix4> for Vector4D {
+    type Output = Self;
+
+    fn mul(self, matrix: Matrix4) -> Vector4D {
+        let mut result = Vector4D::default();
+        for i in 0..4 {
+            result[i] = self * matrix[i];
+        }
+        result
+    }
+}
+
+impl Div<f32> for Vector4D {
+    type Output = Self;
+
+    fn div(self, v: f32) -> Self {
+        Self {
+            x: self.x / v,
+            y: self.y / v,
+            z: self.z / v,
+            w: self.w / v
         }
     }
 }

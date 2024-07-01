@@ -1,7 +1,10 @@
+use crate::{math::vector::Vector3D, camera_cgmath::CameraCgmath};
 use core::panic;
 use std::sync::Arc;
-use wgpu::{Features, Limits, RequestAdapterOptions};
+use wgpu::{util::DeviceExt, Features, Limits, RequestAdapterOptions};
 use winit::{dpi::PhysicalSize, window::Window};
+
+use crate::camera::Camera;
 
 pub struct State<'a> {
     pub surface: wgpu::Surface<'a>,
@@ -11,6 +14,14 @@ pub struct State<'a> {
     pub device: wgpu::Device,
     pub render_pipeline: wgpu::RenderPipeline,
     pub config: wgpu::SurfaceConfiguration,
+    pub camera: Camera,
+    pub camera_bind_group: wgpu::BindGroup,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct CameraUniform {
+    view_proj: [[f32; 4]; 4],
 }
 
 impl<'a> State<'a> {
@@ -71,15 +82,98 @@ impl<'a> State<'a> {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Pipeline Layout"),
-            bind_group_layouts: &[],
-            push_constant_ranges: &[],
+        let camera_test = CameraCgmath {
+            eye: cgmath::Point3::new(0.0, 1.0, 2.0),
+            target: cgmath::Point3::new(0.0, 0.0, 0.0),
+            up: cgmath::Vector3::unit_y(),
+            aspect: config.width as f32 / config.height as f32,
+            // aspect: 1.0,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let camera = Camera {
+            // eye: cgmath::Point3::new(0.0, 1.0, 2.0),
+            // target: cgmath::Point3::new(0.0, 0.0, 0.0),
+            // up: cgmath::Vector3::unit_y(),
+            eye: Vector3D {
+                x: 0.0,
+                y: 1.0,
+                z: 2.0,
+            },
+            target: Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            up: Vector3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            aspect: config.width as f32 / config.height as f32,
+            // aspect: 1.0,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let camera_uniform_test = CameraUniform {
+           view_proj: camera_test.build_view_projection_matrix().into(),
+        };
+
+        let camera_uniform = CameraUniform {
+            view_proj: camera.build_view_projection_matrix().to_array(),
+        };
+
+        println!("Projection: ");
+        for i in 0..4 {
+            for j in 0..4 {
+                println!("     {} = {}", camera_uniform.view_proj[i][j], camera_uniform_test.view_proj[i][j]);
+            }
+        }
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
+
+        let camera_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Camera Bind Group Layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Camera Bind Group"),
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+        });
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Pipeline Layout"),
+                bind_group_layouts: &[&camera_bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
-            layout: Some(&pipeline_layout),
+            layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
@@ -110,6 +204,8 @@ impl<'a> State<'a> {
             queue,
             render_pipeline,
             config,
+            camera,
+            camera_bind_group,
         }
     }
 
@@ -141,6 +237,7 @@ impl<'a> State<'a> {
                 ..Default::default()
             });
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 

@@ -1,29 +1,29 @@
-use super::math::vector::{Vector3D};
+use super::math::vector::Vector3D;
+use super::math::matrix::Matrix4;
 
-struct Camera {
-    eye: Vector3D,
-    target: Vector3D,
-    direction: Vector3D,
-    right: Vector3D,
-    up: Vector3D
+pub struct Camera {
+    pub eye: Vector3D,
+    pub target: Vector3D,
+    pub up: Vector3D,
+    pub aspect: f32,
+    pub fovy: f32,
+    pub znear: f32,
+    pub zfar: f32,
 }
 
 impl Camera {
-    pub fn new(eye: Option<Vector3D>, target: Option<Vector3D>) -> Self {
-        let eye = eye.unwrap_or(Vector3D::new(0.0, 0.0, 0.0));
-        let target = target.unwrap_or(Vector3D::new(0.0, 0.0, 0.0));
-        let direction = eye.sub(&target).normalize();
-
-        let up = Vector3D::new(0.0, 1.0, 0.0);
-        let right = up.cross(&direction).normalize();
-        let up = direction.cross(&right);
-
-        Self {
-            eye,
-            target,
-            direction,
-            right,
-            up
-        }
+    pub fn build_view_projection_matrix(&self) -> Matrix4 {
+        let view = Matrix4::look_at(&self.eye, &self.target, &self.up);
+        let proj = Matrix4::perspective(self.fovy, self.aspect, self.znear, self.zfar);
+        // let OPENGL_TO_WGPU_MATRIX = Matrix4::new(
+        //     1.0, 0.0, 0.0, 0.0,
+        //     0.0, 1.0, 0.0, 0.0,
+        //     0.0, 0.0, 0.5, 0.5,
+        //     0.0, 0.0, 0.0, 1.0,
+        // );
+        // OPENGL_TO_WGPU_MATRIX.multiply(&proj.multiply(&view))
+        // println!("proj: {:#?}", proj.to_array());
+        // proj.multiply(&view)
+        proj * view
     }
 }
